@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="dark" />
-<title>Crypto Futures Screener - Adaptive Kinetic Ribbon</title>
+<title>Crypto Futures Screener - MEXC Engine</title>
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#060b14;--card:#0d1424;--card2:#10192c;--line:#1c2740;--line2:#263351;--txt:#e5e9f3;--muted:#8c97b7;--dim:#4e5875;--good:#24d7a8;--bad:#ff4d7d;--gold:#f7a31b;--warn:#ffca57;--font:'Satoshi','Inter',sans-serif}
@@ -31,19 +31,19 @@
 <body>
 <div class="wrap">
   <header class="hdr">
-    <div><h1>Crypto Futures Screener</h1><div class="sub">Binance USDT Futures · Adaptive Kinetic Ribbon Strategy with Multi-Indicator Confluence Badges.</div></div>
-    <div class="badge"><span class="dot" id="conn-dot"></span><span id="conn-txt">Connecting to Binance…</span></div>
+    <div><h1>Crypto Futures Screener</h1><div class="sub">MEXC USDT Futures · Adaptive Kinetic Ribbon Strategy with Multi-Indicator Confluence Badges.</div></div>
+    <div class="badge"><span class="dot" id="conn-dot"></span><span id="conn-txt">Connecting to MEXC…</span></div>
   </header>
   
   <section class="card">
     <div class="grid-controls">
-      <div class="field"><label>Timeframe</label><select id="tf" class="sel"><option value="15m">15 mins</option><option value="2h">2 hours</option><option value="4h" selected>4 hours</option><option value="1d">1 day</option></select></div>
+      <div class="field"><label>Timeframe</label><select id="tf" class="sel"><option value="Min15">15 mins</option><option value="Hour2">2 hours</option><option value="Hour4" selected>4 hours</option><option value="Day1">1 day</option></select></div>
       <div class="field"><label>Min 24h Volume (USDT)</label><select id="vol" class="sel"><option value="500000">500K</option><option value="1000000" selected>1M</option><option value="5000000">5M</option><option value="10000000">10M</option></select></div>
       <div class="field"><label>Signal Type</label><select id="sig-filter" class="sel"><option value="all">All Crossovers</option><option value="long">Bullish Only</option><option value="short">Bearish Only</option></select></div>
       <div class="field"><label>Scan Limit</label><select id="limit" class="sel"><option value="10" selected>Top 10</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="0">All Eligible</option></select></div>
     </div>
-    <div style="margin-top:12px"><button id="scan-btn" class="btn primary" disabled>SCAN BINANCE FUTURES</button></div>
-    <div class="status" id="status">Initializing proxy and fetching Binance market structures…</div>
+    <div style="margin-top:12px"><button id="scan-btn" class="btn primary" disabled>SCAN MEXC FUTURES</button></div>
+    <div class="status" id="status">Connecting to MEXC Futures API…</div>
   </section>
 
   <section class="card">
@@ -70,21 +70,19 @@
       </table>
     </div>
   </section>
-  <div class="foot">Client-side Binance Futures Integration via proxy · View-only confluence indicators active.</div>
+  <div class="foot">Client-side MEXC Futures Integration · View-only confluence indicators active.</div>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
 const dot=$('conn-dot'),conn=$('conn-txt'),status=$('status'),body=$('result-body'),stats=$('stats'),scanBtn=$('scan-btn');
-let exchangeInfo=null, tickers={};
-// Changed to allorigins proxy which is generally more stable against 403 blocks
-const BASE='https://fapi.binance.com';
+let contracts=[];
 
 async function apiGet(endpoint){
-  const targetUrl = BASE + endpoint;
-  const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl));
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return await r.json();
+  const r = await fetch('https://contract.mexc.com' + endpoint);
+  const json = await r.json();
+  if(!json.success) throw new Error('MEXC API Error');
+  return json.data;
 }
 
 function setStatus(msg,type=''){status.className='status '+type;status.textContent=msg;}
@@ -93,20 +91,16 @@ function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
 
 async function init(){
   setConn('Connecting…','');
-  setStatus('Connecting to Binance Futures API…');
+  setStatus('Connecting to MEXC Futures API…');
   try {
-    const [info, tickData] = await Promise.all([
-      apiGet('/fapi/v1/exchangeInfo'),
-      apiGet('/fapi/v1/ticker/24hr')
-    ]);
-    exchangeInfo = info;
-    (tickData||[]).forEach(t => { tickers[t.symbol] = t; });
+    const data = await apiGet('/api/v1/contract/detail');
+    contracts = (data || []).filter(c => c.quoteCoin === 'USDT' && c.state === 0);
     setConn('Ready','on');
-    setStatus(`Connected successfully — Loaded ${info.symbols.length} contracts. Ready to scan.`,'ok');
+    setStatus(`Connected successfully — Loaded ${contracts.length} perpetual contracts. Ready to scan.`,'ok');
     scanBtn.disabled = false;
   } catch(e) {
     setConn('Offline','err');
-    setStatus('Connection error: '+e.message+'. Refresh page to retry.','err');
+    setStatus('Connection error. Refresh page to retry.','err');
   }
 }
 
@@ -184,37 +178,35 @@ function detectRibbonSignal(closes){
 }
 
 async function scanMarket(){
-  if(!exchangeInfo) return;
+  if(!contracts.length) return;
   scanBtn.disabled = true;
-  body.innerHTML = `<tr><td colspan="10" class="empty"><span class="spinner"></span>Scanning Binance Futures universe...</td></tr>`;
+  body.innerHTML = `<tr><td colspan="10" class="empty"><span class="spinner"></span>Scanning MEXC Futures universe...</td></tr>`;
   
   const tf = $('tf').value;
   const minVol = n($('vol').value);
   const sigFilter = $('sig-filter').value;
   const limitSetting = n($('limit').value);
   
-  const symbols = exchangeInfo.symbols.filter(s => s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT' && s.status === 'TRADING');
   let results = [];
   let scannedCount = 0, validCount = 0, failCount = 0;
 
-  for(let sInfo of symbols){
-    const symbol = sInfo.symbol;
-    const t = tickers[symbol];
-    const vol24 = t ? n(t.quoteVolume) : 0;
-    if(vol24 < minVol) continue;
-    
+  for(let cInfo of contracts){
+    const symbol = cInfo.symbol; // e.g. BTC_USDT
     scannedCount++;
     setStatus(`Scanning ${scannedCount} symbols · Found ${results.length} setups...`);
 
     try {
-      const klines = await apiGet(`/fapi/v1/klines?symbol=${symbol}&interval=${tf}&limit=100`);
-      if(!klines || klines.length < 50) { failCount++; continue; }
+      const klineData = await apiGet(`/api/v1/contract/kline/${symbol}?interval=${tf}&limit=100`);
+      if(!klineData || !klineData.close || klineData.close.length < 50) { failCount++; continue; }
       validCount++;
 
-      const c = klines.map(k => n(k[4]));
-      const h = klines.map(k => n(k[2]));
-      const l = klines.map(k => n(k[3]));
-      const v = klines.map(k => n(k[5]));
+      const c = klineData.close.map(v => n(v));
+      const h = klineData.high.map(v => n(v));
+      const l = klineData.low.map(v => n(v));
+      const v = klineData.vol.map(v => n(v));
+
+      const approxVol24 = v.slice(-24).reduce((a,b)=>a+b,0) * (c[c.length-1] || 1);
+      if(approxVol24 < minVol) continue;
 
       const signal = detectRibbonSignal(c);
       if(!signal) continue;
@@ -240,16 +232,16 @@ async function scanMarket(){
       const vwmaBadge = price >= currentVWMA ? '<span class="tag tag-good">Volume Bullish</span>' : '<span class="tag tag-bad">Volume Bearish</span>';
 
       results.push({
-        symbol,
+        symbol: symbol.replace('_', ''),
         signal: signal.type,
-        tf,
+        tf: tf.replace('Hour','').replace('Min','m').replace('Day','d'),
         adxBadge,
         ribbonBadge,
         lsBadge,
         oiBadge,
         cvdBadge,
         vwmaBadge,
-        vol: vol24
+        vol: approxVol24
       });
 
     } catch(err){
