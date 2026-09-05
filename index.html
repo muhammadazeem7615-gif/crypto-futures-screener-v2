@@ -1,283 +1,422 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="color-scheme" content="dark" />
-<title>Crypto Futures Screener - MEXC Engine</title>
-<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#060b14;--card:#0d1424;--card2:#10192c;--line:#1c2740;--line2:#263351;--txt:#e5e9f3;--muted:#8c97b7;--dim:#4e5875;--good:#24d7a8;--bad:#ff4d7d;--gold:#f7a31b;--warn:#ffca57;--font:'Satoshi','Inter',sans-serif}
-*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:var(--font)}body{min-height:100vh;padding:16px 14px 32px}button,select{font:inherit}button{border:0}.wrap{max-width:1400px;margin:auto}
-.hdr{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:16px}h1{font-size:clamp(21px,4vw,28px);line-height:1.05;font-weight:900;letter-spacing:.075em;margin:0 0 7px;text-transform:uppercase}.sub{font-size:12px;color:var(--muted);letter-spacing:.08em;line-height:1.55;max-width:740px}
-.badge{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:8px 12px;border:1px solid var(--line2);font-size:12px;background:#0a1120}.dot{width:10px;height:10px;border-radius:50%;background:var(--dim)}.dot.on{background:var(--good);box-shadow:0 0 12px var(--good)}.dot.err{background:var(--bad);box-shadow:0 0 12px var(--bad)}
-.card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 12px 32px rgba(0,0,0,.2)}
-.grid-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.field label{display:block;font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:7px}.sel{width:100%;appearance:none;background:#09101d;border:1px solid var(--line2);color:var(--txt);border-radius:12px;padding:12px}
-.btn{width:100%;min-height:45px;padding:12px;border-radius:13px;font-weight:900;letter-spacing:.08em;cursor:pointer}.btn.primary{background:var(--gold);color:#101010}.btn:disabled{opacity:.5;cursor:not-allowed}
-.status{font-size:12px;color:var(--muted);margin-top:11px;line-height:1.45;min-height:18px}.status.err{color:#ff9ab4}.status.ok{color:var(--good)}
-.statbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.pill{padding:7px 10px;border-radius:10px;background:#10182a;border:1px solid var(--line);font-size:12px;color:var(--muted)}.pill b{color:var(--txt)}
-.table-wrap{overflow-x:auto}.table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px}.table th,.table td{padding:11px 8px;text-align:left;border-bottom:1px solid var(--line)}.table th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
-.sym{font-weight:900;color:#fff}.sig-long{color:var(--good);font-weight:900}.sig-short{color:var(--bad);font-weight:900}
-.tag{display:inline-block;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.05em}
-.tag-good{background:rgba(36,215,168,.15);color:var(--good);border:1px solid rgba(36,215,168,.3)}
-.tag-bad{background:rgba(255,77,125,.15);color:var(--bad);border:1px solid rgba(255,77,125,.3)}
-.tag-warn{background:rgba(247,163,27,.15);color:var(--gold);border:1px solid rgba(247,163,27,.3)}
-.tag-neutral{background:rgba(140,151,183,.15);color:var(--muted);border:1px solid rgba(140,151,183,.3)}
-.empty{padding:28px 8px;color:var(--muted);font-size:13px;text-align:center}.foot{margin-top:10px;font-size:11px;color:var(--muted);letter-spacing:.07em;line-height:1.55}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;vertical-align:-2px;margin-right:6px;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.grid-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.hdr{flex-direction:column}.badge{align-self:flex-start}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Futures Screener - Institutional Confluence</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0e27; color: #e0e0e0; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        .header { margin-bottom: 25px; border-bottom: 2px solid #1a1f3a; padding-bottom: 20px; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; color: #00ffaa; }
+        .header-info { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .status { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: #1a1f3a; border-radius: 6px; font-size: 14px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ffaa; animation: pulse 2s infinite; }
+        .status-dot.idle { background: #ffa500; animation: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; background: #0f1329; padding: 16px; border-radius: 8px; border: 1px solid #1a1f3a; }
+        .filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-group { display: flex; gap: 8px; align-items: center; }
+        .filter-group label { font-size: 12px; color: #888; text-transform: uppercase; font-weight: 600; }
+        select { padding: 6px 12px; background: #1a1f3a; color: #00ffaa; border: 1px solid #00ffaa; border-radius: 4px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer; }
+        button { padding: 6px 14px; background: #1a1f3a; color: #00ffaa; border: 1px solid #00ffaa; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+        button:hover, button.active { background: #00ffaa; color: #0a0e27; }
+        .signals-table { width: 100%; border-collapse: collapse; background: #0f1329; border-radius: 8px; overflow: hidden; }
+        .signals-table thead { background: #1a1f3a; border-bottom: 2px solid #2a2f4a; }
+        .signals-table th { padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #888; border-right: 1px solid #2a2f4a; }
+        .signals-table th:last-child { border-right: none; }
+        .signals-table tbody tr { border-bottom: 1px solid #1a1f3a; transition: background 0.2s; }
+        .signals-table tbody tr:hover { background: #1a1f3a; }
+        .signals-table td { padding: 12px 16px; font-size: 13px; border-right: 1px solid #1a1f3a; }
+        .signals-table td:last-child { border-right: none; }
+        .coin-name { font-weight: 600; color: #fff; min-width: 80px; }
+        .signal-badge { padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; display: inline-block; min-width: 140px; text-align: center; }
+        .bull-accel { background: rgba(0, 255, 170, 0.2); color: #00ffaa; border: 1px solid #00ffaa; }
+        .bull-decel { background: rgba(0, 100, 64, 0.2); color: #00dd88; border: 1px solid #00dd88; }
+        .bear-accel { background: rgba(255, 0, 0, 0.2); color: #ff4444; border: 1px solid #ff4444; }
+        .bear-decel { background: rgba(139, 0, 0, 0.2); color: #dd4444; border: 1px solid #dd4444; }
+        .crossover-bull { background: rgba(0, 200, 150, 0.2); color: #00ffaa; border: 1px solid #00ffaa; }
+        .crossover-bear { background: rgba(255, 50, 50, 0.2); color: #ff5555; border: 1px solid #ff5555; }
+        .timeframe-badge { background: #2a2f4a; color: #00ffaa; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; min-width: 50px; text-align: center; }
+        .price { color: #00ffaa; font-weight: 500; }
+        .vol-spike { color: #00ffaa; font-weight: bold; }
+        .timestamp { color: #666; font-size: 12px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+        .error-message { background: rgba(255, 0, 0, 0.1); border: 1px solid #ff4444; color: #ff8888; padding: 16px; border-radius: 6px; margin-bottom: 20px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #1a1f3a; padding: 16px; border-radius: 6px; border-left: 3px solid #00ffaa; }
+        .stat-label { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+        .stat-value { font-size: 24px; font-weight: 600; color: #00ffaa; }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="hdr">
-    <div><h1>Crypto Futures Screener</h1><div class="sub">MEXC USDT Futures · Adaptive Kinetic Ribbon Strategy with Multi-Indicator Confluence Badges.</div></div>
-    <div class="badge"><span class="dot" id="conn-dot"></span><span id="conn-txt">Connecting to MEXC…</span></div>
-  </header>
-  
-  <section class="card">
-    <div class="grid-controls">
-      <div class="field"><label>Timeframe</label><select id="tf" class="sel"><option value="Min15">15 mins</option><option value="Hour2">2 hours</option><option value="Hour4" selected>4 hours</option><option value="Day1">1 day</option></select></div>
-      <div class="field"><label>Min 24h Volume (USDT)</label><select id="vol" class="sel"><option value="500000">500K</option><option value="1000000" selected>1M</option><option value="5000000">5M</option><option value="10000000">10M</option></select></div>
-      <div class="field"><label>Signal Type</label><select id="sig-filter" class="sel"><option value="all">All Crossovers</option><option value="long">Bullish Only</option><option value="short">Bearish Only</option></select></div>
-      <div class="field"><label>Scan Limit</label><select id="limit" class="sel"><option value="10" selected>Top 10</option><option value="25">Top 25</option><option value="50">Top 50</option><option value="0">All Eligible</option></select></div>
-    </div>
-    <div style="margin-top:12px"><button id="scan-btn" class="btn primary" disabled>SCAN MEXC FUTURES</button></div>
-    <div class="status" id="status">Connecting to MEXC Futures API…</div>
-  </section>
+    <div id="root"></div>
 
-  <section class="card">
-    <div class="statbar" id="stats"></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Coin</th>
-            <th>Signal</th>
-            <th>Timeframe</th>
-            <th>ADX (Trend)</th>
-            <th>Ribbon Width</th>
-            <th>L/S Ratio</th>
-            <th>Open Interest</th>
-            <th>CVD Flow</th>
-            <th>VWMA Trend</th>
-            <th>24h Vol</th>
-          </tr>
-        </thead>
-        <tbody id="result-body">
-          <tr><td colspan="10" class="empty">Waiting for initial system check…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-  <div class="foot">Client-side MEXC Futures Integration · View-only confluence indicators active.</div>
-</div>
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
 
-<script>
-const $=id=>document.getElementById(id);
-const dot=$('conn-dot'),conn=$('conn-txt'),status=$('status'),body=$('result-body'),stats=$('stats'),scanBtn=$('scan-btn');
-let contracts=[];
+        function CryptoScreener() {
+            const [signals, setSignals] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [lastUpdate, setLastUpdate] = useState(null);
+            const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+            
+            const knownSignalsRef = useRef(new Set());
 
-async function apiGet(endpoint){
-  const r = await fetch('https://contract.mexc.com' + endpoint);
-  const json = await r.json();
-  if(!json.success) throw new Error('MEXC API Error');
-  return json.data;
-}
+            const [filterTimeframe, setFilterTimeframe] = useState('all');
+            const [filterSignalType, setFilterSignalType] = useState('all');
+            const [minVolume, setMinVolume] = useState(5000000);
 
-function setStatus(msg,type=''){status.className='status '+type;status.textContent=msg;}
-function setConn(label,kind){dot.className='dot '+kind;conn.textContent=label;}
-function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
+            const INDICATOR_PARAMS = { length: 20, mult: 1.5, ribbonFastLength: 3, ribbonSlowLength: 8 };
+            const TIMEFRAMES = [ { name: '15m' }, { name: '2h' }, { name: '4h' }, { name: '1d' } ];
 
-async function init(){
-  setConn('Connecting…','');
-  setStatus('Connecting to MEXC Futures API…');
-  try {
-    const data = await apiGet('/api/v1/contract/detail');
-    contracts = (data || []).filter(c => c.quoteCoin === 'USDT' && c.state === 0);
-    setConn('Ready','on');
-    setStatus(`Connected successfully — Loaded ${contracts.length} perpetual contracts. Ready to scan.`,'ok');
-    scanBtn.disabled = false;
-  } catch(e) {
-    setConn('Offline','err');
-    setStatus('Connection error. Refresh page to retry.','err');
-  }
-}
+            const requestNotificationPermission = () => {
+                if (!("Notification" in window)) return;
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") setNotificationsEnabled(true);
+                });
+            };
 
-function ema(arr, period){
-  if(arr.length < period) return [];
-  const k = 2/(period+1);
-  let res = [];
-  let prev = arr.slice(0, period).reduce((a,b)=>a+b,0)/period;
-  res[period-1] = prev;
-  for(let i=period; i<arr.length; i++){
-    prev = arr[i]*k + prev*(1-k);
-    res[i] = prev;
-  }
-  return res;
-}
+            useEffect(() => {
+                if ("Notification" in window && Notification.permission === "granted") setNotificationsEnabled(true);
+            }, []);
 
-function vwma(c, v, period){
-  if(c.length < period) return [];
-  let res = [];
-  for(let i=period-1; i<c.length; i++){
-    let sumPV = 0, sumV = 0;
-    for(let j=0; j<period; j++){
-      sumPV += c[i-j] * v[i-j];
-      sumV += v[i-j];
-    }
-    res[i] = sumV === 0 ? c[i] : sumPV / sumV;
-  }
-  return res;
-}
+            const fetchBinance = async (url) => {
+                try {
+                    const res = await fetch(url);
+                    if (res.ok) return await res.json();
+                    throw new Error('Direct fetch failed');
+                } catch (e) {
+                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+                    const resProxy = await fetch(proxyUrl);
+                    return await resProxy.json();
+                }
+            };
 
-function calcADX(h, l, c, period=14){
-  if(c.length < period*2) return 20;
-  let tr=[], plusDM=[], minusDM=[];
-  for(let i=1; i<c.length; i++){
-    tr.push(Math.max(h[i]-l[i], Math.abs(h[i]-c[i-1]), Math.abs(l[i]-c[i-1])));
-    let up = h[i]-h[i-1], dn = l[i-1]-l[i];
-    plusDM.push(up>dn && up>0 ? up : 0);
-    minusDM.push(dn>up && dn>0 ? dn : 0);
-  }
-  let sumTR = tr.slice(0,period).reduce((a,b)=>a+b,0);
-  let sumP = plusDM.slice(0,period).reduce((a,b)=>a+b,0);
-  let sumM = minusDM.slice(0,period).reduce((a,b)=>a+b,0);
-  let dxs = [];
-  for(let i=period; i<tr.length; i++){
-    let pDI = 100 * (sumP / (sumTR || 1));
-    let mDI = 100 * (sumM / (sumTR || 1));
-    let dx = 100 * Math.abs(pDI - mDI) / ((pDI + mDI) || 1);
-    dxs.push(dx);
-    sumTR = sumTR - (sumTR/period) + tr[i];
-    sumP = sumP - (sumP/period) + plusDM[i];
-    sumM = sumM - (sumM/period) + minusDM[i];
-  }
-  return dxs.length ? dxs[dxs.length-1] : 20;
-}
+            const calculateIndicatorSeries = (closes) => {
+                const minReq = INDICATOR_PARAMS.length + INDICATOR_PARAMS.ribbonSlowLength + 5;
+                if (!Array.isArray(closes) || closes.length < minReq) return null;
 
-function detectRibbonSignal(closes){
-  const fast = ema(closes, 9);
-  const slow = ema(closes, 21);
-  if(fast.length < 5 || slow.length < 5) return null;
-  const lastIdx = closes.length - 1;
-  const prevIdx = lastIdx - 1;
-  
-  const fastNow = fast[lastIdx], slowNow = slow[lastIdx];
-  const fastPrev = fast[prevIdx], slowPrev = slow[prevIdx];
-  
-  if(!fastNow || !slowNow || !fastPrev || !slowPrev) return null;
-  
-  if(fastPrev <= slowPrev && fastNow > slowNow){
-    return { type: 'BULLISH CROSSOVER' };
-  }
-  if(fastPrev >= slowPrev && fastNow < slowNow){
-    return { type: 'BEARISH CROSSOVER' };
-  }
-  return null;
-}
+                const length = INDICATOR_PARAMS.length;
+                const kineticSeries = [];
 
-async function scanMarket(){
-  if(!contracts.length) return;
-  scanBtn.disabled = true;
-  body.innerHTML = `<tr><td colspan="10" class="empty"><span class="spinner"></span>Scanning MEXC Futures universe...</td></tr>`;
-  
-  const tf = $('tf').value;
-  const minVol = n($('vol').value);
-  const sigFilter = $('sig-filter').value;
-  const limitSetting = n($('limit').value);
-  
-  let results = [];
-  let scannedCount = 0, validCount = 0, failCount = 0;
+                for (let i = length; i < closes.length; i++) {
+                    const velocity = closes[i] - closes[i - length];
+                    let sumSqDiff = 0;
+                    for (let j = i - length + 1; j <= i; j++) {
+                        const change = closes[j] - closes[j - 1];
+                        sumSqDiff += change * change;
+                    }
+                    const volatility = Math.sqrt(sumSqDiff / length) * INDICATOR_PARAMS.mult;
+                    const adaptiveAlpha = Math.abs(velocity) / (Math.abs(velocity) + volatility + 0.0001);
 
-  for(let cInfo of contracts){
-    const symbol = cInfo.symbol; // e.g. BTC_USDT
-    scannedCount++;
-    setStatus(`Scanning ${scannedCount} symbols · Found ${results.length} setups...`);
+                    let prevKinetic = kineticSeries.length > 0 ? kineticSeries[kineticSeries.length - 1] : closes[i - length];
+                    let kineticLine = prevKinetic + adaptiveAlpha * (closes[i] - prevKinetic);
+                    kineticSeries.push(kineticLine);
+                }
 
-    try {
-      const klineData = await apiGet(`/api/v1/contract/kline/${symbol}?interval=${tf}&limit=100`);
-      if(!klineData || !klineData.close || klineData.close.length < 50) { failCount++; continue; }
-      validCount++;
+                const getRibbonStateAt = (idx) => {
+                    if (idx < INDICATOR_PARAMS.ribbonSlowLength - 1 || idx >= kineticSeries.length) return null;
+                    const fastSlice = kineticSeries.slice(idx - INDICATOR_PARAMS.ribbonFastLength + 1, idx + 1);
+                    const slowSlice = kineticSeries.slice(idx - INDICATOR_PARAMS.ribbonSlowLength + 1, idx + 1);
 
-      const c = klineData.close.map(v => n(v));
-      const h = klineData.high.map(v => n(v));
-      const l = klineData.low.map(v => n(v));
-      const v = klineData.vol.map(v => n(v));
+                    const ribbonFast = fastSlice.reduce((a, b) => a + b, 0) / INDICATOR_PARAMS.ribbonFastLength;
+                    const ribbonSlow = slowSlice.reduce((a, b) => a + b, 0) / INDICATOR_PARAMS.ribbonSlowLength;
 
-      const approxVol24 = v.slice(-24).reduce((a,b)=>a+b,0) * (c[c.length-1] || 1);
-      if(approxVol24 < minVol) continue;
+                    return { ribbonFast, ribbonSlow };
+                };
 
-      const signal = detectRibbonSignal(c);
-      if(!signal) continue;
-      
-      if(sigFilter === 'long' && !signal.type.includes('BULLISH')) continue;
-      if(sigFilter === 'short' && !signal.type.includes('BEARISH')) continue;
+                const kLen = kineticSeries.length;
+                const current = getRibbonStateAt(kLen - 1);
+                const previous = getRibbonStateAt(kLen - 2);
+                const previousPrev = getRibbonStateAt(kLen - 3);
 
-      const adxVal = calcADX(h, l, c);
-      const fastEma = ema(c, 9).pop() || c[c.length-1];
-      const slowEma = ema(c, 21).pop() || c[c.length-1];
-      const ribbonWidthPct = Math.abs(fastEma - slowEma) / slowEma * 100;
-      
-      const vwmaArr = vwma(c, v, 20);
-      const currentVWMA = vwmaArr[vwmaArr.length-1] || c[c.length-1];
-      const price = c[c.length-1];
+                if (!current || !previous || !previousPrev) return null;
+                return { current, previous, previousPrev };
+            };
 
-      const adxBadge = adxVal > 25 ? '<span class="tag tag-good">Strong Trend</span>' : (adxVal < 18 ? '<span class="tag tag-neutral">Choppy / Ranging</span>' : '<span class="tag tag-warn">Moderate</span>');
-      const ribbonBadge = ribbonWidthPct < 0.3 ? '<span class="tag tag-warn">Coiled / Tight</span>' : '<span class="tag tag-good">Expanding</span>';
-      
-      const lsBadge = Math.random() > 0.5 ? '<span class="tag tag-neutral">Balanced</span>' : '<span class="tag tag-warn">Retail Crowded</span>';
-      const oiBadge = Math.random() > 0.4 ? '<span class="tag tag-good">New Capital Flow</span>' : '<span class="tag tag-neutral">Unwinding</span>';
-      const cvdBadge = signal.type.includes('BULLISH') ? '<span class="tag tag-good">Aggressive Buying</span>' : '<span class="tag tag-bad">Aggressive Selling</span>';
-      const vwmaBadge = price >= currentVWMA ? '<span class="tag tag-good">Volume Bullish</span>' : '<span class="tag tag-bad">Volume Bearish</span>';
+            const detectSignals = (closesHistory, volumesHistory) => {
+                const states = calculateIndicatorSeries(closesHistory);
+                if (!states) return null;
 
-      results.push({
-        symbol: symbol.replace('_', ''),
-        signal: signal.type,
-        tf: tf.replace('Hour','').replace('Min','m').replace('Day','d'),
-        adxBadge,
-        ribbonBadge,
-        lsBadge,
-        oiBadge,
-        cvdBadge,
-        vwmaBadge,
-        vol: approxVol24
-      });
+                const { current, previous, previousPrev } = states;
 
-    } catch(err){
-      failCount++;
-    }
-  }
+                // 1. Core Logic
+                const trendUp = current.ribbonFast > current.ribbonSlow;
+                const trendUpPrev = previous.ribbonFast > previous.ribbonSlow;
+                const bullishCrossover = !trendUpPrev && trendUp;
+                const bearishCrossover = trendUpPrev && !trendUp;
 
-  stats.innerHTML = `<div class="pill"><b>Timeframe:</b> ${tf}</div><div class="pill"><b>Scanned:</b> ${scannedCount}</div><div class="pill"><b>Setups Found:</b> ${results.length}</div>`;
+                const velocityNow = current.ribbonFast - previous.ribbonFast;
+                const velocityPrev = previous.ribbonFast - previousPrev.ribbonFast;
+                const isAccelerating = velocityNow > velocityPrev;
 
-  if(!results.length){
-    body.innerHTML = `<tr><td colspan="10" class="empty">No matching setups found with current filters. Try adjusting your timeframe or volume threshold.</td></tr>`;
-  } else {
-    const finalView = limitSetting === 0 ? results : results.slice(0, limitSetting);
-    body.innerHTML = finalView.map(r => `
-      <tr>
-        <td class="sym">${r.symbol}</td>
-        <td class="${r.signal.includes('BULLISH')?'sig-long':'sig-short'}">${r.signal}</td>
-        <td><span class="tag tag-neutral">${r.tf}</span></td>
-        <td>${r.adxBadge}</td>
-        <td>${r.ribbonBadge}</td>
-        <td>${r.lsBadge}</td>
-        <td>${r.oiBadge}</td>
-        <td>${r.cvdBadge}</td>
-        <td>${r.vwmaBadge}</td>
-        <td>$${(r.vol/1e6).toFixed(2)}M</td>
-      </tr>
-    `).join('');
-  }
+                const bullAccel = trendUp && isAccelerating;
+                const bullDecel = trendUp && !isAccelerating;
+                const bearAccel = !trendUp && (velocityNow < velocityPrev);
+                const bearDecel = !trendUp && (velocityNow >= velocityPrev);
 
-  setStatus(`Scan complete — ${results.length} setups detected across ${validCount} valid pairs.`,'ok');
-  scanBtn.disabled = false;
-}
+                // 2. Confluence Filter: Relative Volume Spike
+                if (volumesHistory.length < 21) return null;
+                const signalVol = volumesHistory[volumesHistory.length - 1];
+                const vol20 = volumesHistory.slice(-21, -1);
+                const avgVol = vol20.reduce((a, b) => a + b, 0) / 20;
+                const relVol = signalVol / (avgVol || 1);
+                
+                // KILL SWITCH: If volume isn't at least 1.5x the average, drop the signal entirely.
+                if (relVol < 1.5) return null; 
 
-scanBtn.disabled = true;
-scanBtn.addEventListener('click', scanMarket);
-init();
-</script>
+                // 3. Confluence Filter: Volatility Squeeze / Overextension
+                const close20 = closesHistory.slice(-20);
+                const sma20 = close20.reduce((a, b) => a + b, 0) / 20;
+                let sumSq = 0;
+                for (let c of close20) sumSq += Math.pow(c - sma20, 2);
+                const stdDev = Math.sqrt(sumSq / 20);
+                
+                // 2.5 StdDev marks extreme overextension
+                const upperBB = sma20 + (2.5 * stdDev); 
+                const lowerBB = sma20 - (2.5 * stdDev);
+                
+                const latestClose = closesHistory[closesHistory.length - 1];
+                const isOverextendedBull = latestClose >= upperBB;
+                const isOverextendedBear = latestClose <= lowerBB;
+
+                const detected = [];
+                // Only push signals if they are NOT hopelessly overextended
+                if (bullishCrossover && !isOverextendedBull) detected.push('Bullish Crossover');
+                if (bearishCrossover && !isOverextendedBear) detected.push('Bearish Crossover');
+                if (bullAccel && !isOverextendedBull) detected.push('Bullish Acceleration');
+                if (bullDecel) detected.push('Bullish Deceleration');
+                if (bearAccel && !isOverextendedBear) detected.push('Bearish Acceleration');
+                if (bearDecel) detected.push('Bearish Deceleration');
+
+                return detected.length > 0 ? { detected, relVol: relVol.toFixed(1) } : null;
+            };
+
+            const fetchAndScan = useCallback(async () => {
+                if (loading) return;
+                setLoading(true);
+                setError('');
+                const newSignals = [];
+
+                try {
+                    const ticker24h = await fetchBinance('https://fapi.binance.com/fapi/v1/ticker/24hr');
+                    const volumeMap = {};
+                    if (Array.isArray(ticker24h)) {
+                        ticker24h.forEach(t => volumeMap[t.symbol] = parseFloat(t.quoteVolume));
+                    }
+
+                    const exchangeInfo = await fetchBinance('https://fapi.binance.com/fapi/v1/exchangeInfo');
+                    const symbols = exchangeInfo && exchangeInfo.symbols
+                        ? exchangeInfo.symbols
+                            .filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT')
+                            .map(s => s.symbol)
+                            .sort((a, b) => (volumeMap[b] || 0) - (volumeMap[a] || 0)) // Sort by volume first
+                            .slice(0, 60)
+                        : [];
+
+                    const batchSize = 4;
+                    for (let i = 0; i < symbols.length; i += batchSize) {
+                        const batch = symbols.slice(i, i + batchSize);
+                        await Promise.all(batch.map(async (symbol) => {
+                            const volume24h = volumeMap[symbol] || 0;
+
+                            for (const tf of TIMEFRAMES) {
+                                try {
+                                    const klines = await fetchBinance(
+                                        `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${tf.name}&limit=60`
+                                    );
+
+                                    if (!Array.isArray(klines) || klines.length < 40) continue;
+
+                                    // STRUCTURAL FIX: Strip the live forming candle to prevent repainting traps
+                                    const completedKlines = klines.slice(0, -1);
+                                    const closes = completedKlines.map(k => parseFloat(k[4]));
+                                    const volumes = completedKlines.map(k => parseFloat(k[5]));
+                                    
+                                    // STRUCTURAL FIX: Unique timestamp ID stops notification lock-outs
+                                    const candleTime = completedKlines[completedKlines.length - 1][0];
+
+                                    const signalData = detectSignals(closes, volumes);
+
+                                    if (signalData && signalData.detected) {
+                                        signalData.detected.forEach(signal => {
+                                            const signalId = `${symbol}-${tf.name}-${signal}-${candleTime}`;
+                                            
+                                            if (signal.includes('Crossover') && !knownSignalsRef.current.has(signalId)) {
+                                                knownSignalsRef.current.add(signalId);
+                                                if (Notification.permission === "granted") {
+                                                    new Notification(`🚨 ${signal} (${signalData.relVol}x Vol)`, {
+                                                        body: `${symbol.replace('USDT', '')} on ${tf.name} timeframe just crossed over.`,
+                                                    });
+                                                }
+                                            }
+
+                                            newSignals.push({
+                                                id: signalId,
+                                                symbol: symbol.replace('USDT', ''),
+                                                timeframe: tf.name,
+                                                signal,
+                                                relVol: signalData.relVol,
+                                                price: closes[closes.length - 1],
+                                                volume24h,
+                                                timestamp: new Date()
+                                            });
+                                        });
+                                    }
+                                } catch (e) {
+                                    // Silent catch to preserve batch
+                                }
+                            }
+                        }));
+                    }
+
+                    newSignals.sort((a, b) => b.timestamp - a.timestamp);
+                    setSignals(newSignals);
+                    setLastUpdate(new Date());
+                } catch (err) {
+                    setError(`Scan error: ${err.message}`);
+                }
+                setLoading(false);
+            }, [loading]);
+
+            useEffect(() => {
+                fetchAndScan();
+                const interval = setInterval(fetchAndScan, 5 * 60 * 1000);
+                const handleVisibilityChange = () => { if (document.visibilityState === 'visible') fetchAndScan(); };
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    clearInterval(interval);
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                };
+            }, [fetchAndScan]);
+
+            const filteredSignals = signals.filter(s => {
+                const timeframeMatch = filterTimeframe === 'all' || s.timeframe === filterTimeframe;
+                const volumeMatch = s.volume24h >= minVolume;
+                let signalMatch = true;
+                if (filterSignalType === 'crossovers') signalMatch = s.signal.includes('Crossover');
+                else if (filterSignalType === 'crossover-bull') signalMatch = s.signal === 'Bullish Crossover';
+                else if (filterSignalType === 'crossover-bear') signalMatch = s.signal === 'Bearish Crossover';
+                return timeframeMatch && volumeMatch && signalMatch;
+            });
+
+            const getSignalClass = (signal) => {
+                if (signal.includes('Bullish Crossover')) return 'crossover-bull';
+                if (signal.includes('Bearish Crossover')) return 'crossover-bear';
+                if (signal.includes('Bullish Acceleration')) return 'bull-accel';
+                if (signal.includes('Bearish Acceleration')) return 'bear-accel';
+                return '';
+            };
+
+            const formatVolume = (vol) => {
+                if (vol >= 1e9) return `$${(vol / 1e9).toFixed(2)}B`;
+                if (vol >= 1e6) return `$${(vol / 1e6).toFixed(2)}M`;
+                return `$${(vol / 1e3).toFixed(0)}K`;
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>🚀 Institutional Crypto Screener</h1>
+                        <div className="header-info">
+                            <div className="status">
+                                <div className={`status-dot ${loading ? '' : 'idle'}`}></div>
+                                <span>{loading ? 'Scanning with Confluence...' : 'Ready'}</span>
+                            </div>
+                            {lastUpdate && <div className="status">Last check: {lastUpdate.toLocaleTimeString()}</div>}
+                            <button onClick={fetchAndScan} disabled={loading}>{loading ? 'Scanning...' : 'Force Scan'}</button>
+                            <button onClick={requestNotificationPermission} style={{ background: notificationsEnabled ? '#00ffaa' : '#1a1f3a', color: notificationsEnabled ? '#0a0e27' : '#00ffaa' }}>
+                                {notificationsEnabled ? '🔔 Pop-ups Active' : '🔕 Enable Alerts'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {error && <div className="error-message">{error}</div>}
+
+                    <div className="stats">
+                        <div className="stat-card">
+                            <div className="stat-label">A+ Setups Found</div>
+                            <div className="stat-value">{filteredSignals.length}</div>
+                        </div>
+                    </div>
+
+                    <div className="controls">
+                        <div className="filter-row">
+                            <div className="filter-group">
+                                <label>Signal Type:</label>
+                                <select value={filterSignalType} onChange={(e) => setFilterSignalType(e.target.value)}>
+                                    <option value="all">All Validated Signals</option>
+                                    <option value="crossovers">All Crossovers</option>
+                                    <option value="crossover-bull">Bullish Crossovers Only</option>
+                                    <option value="crossover-bear">Bearish Crossovers Only</option>
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <label>Min 24h Vol:</label>
+                                <select value={minVolume} onChange={(e) => setMinVolume(Number(e.target.value))}>
+                                    <option value={1000000}>$1M USDT</option>
+                                    <option value={5000000}>$5M USDT</option>
+                                    <option value={20000000}>$20M USDT</option>
+                                    <option value={50000000}>$50M USDT</option>
+                                </select>
+                            </div>
+                            <div className="filter-group" style={{marginLeft: '20px'}}>
+                                <label>Timeframe:</label>
+                                <button className={filterTimeframe === 'all' ? 'active' : ''} onClick={() => setFilterTimeframe('all')}>All</button>
+                                <button className={filterTimeframe === '15m' ? 'active' : ''} onClick={() => setFilterTimeframe('15m')}>15m</button>
+                                <button className={filterTimeframe === '2h' ? 'active' : ''} onClick={() => setFilterTimeframe('2h')}>2h</button>
+                                <button className={filterTimeframe === '4h' ? 'active' : ''} onClick={() => setFilterTimeframe('4h')}>4h</button>
+                                <button className={filterTimeframe === '1d' ? 'active' : ''} onClick={() => setFilterTimeframe('1d')}>1d</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {filteredSignals.length === 0 ? (
+                        <div className="empty-state">
+                            <p>⏳ {loading ? 'Running confluence filters...' : 'No A+ setups found right now.'}</p>
+                            <p style={{fontSize: '12px', color: '#555', marginTop: '10px'}}>Signals are strictly filtered for Volume Spikes (>1.5x) and Volatility Squeezes.</p>
+                        </div>
+                    ) : (
+                        <table className="signals-table">
+                            <thead>
+                                <tr>
+                                    <th>Coin</th>
+                                    <th>Validated Signal</th>
+                                    <th>TF</th>
+                                    <th>Price</th>
+                                    <th>Vol Spike</th>
+                                    <th>24h Vol</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredSignals.map(sig => (
+                                    <tr key={sig.id}>
+                                        <td className="coin-name">{sig.symbol}</td>
+                                        <td><span className={`signal-badge ${getSignalClass(sig.signal)}`}>{sig.signal}</span></td>
+                                        <td><span className="timeframe-badge">{sig.timeframe}</span></td>
+                                        <td className="price">${sig.price < 1 ? sig.price.toFixed(4) : sig.price.toFixed(2)}</td>
+                                        <td className="vol-spike">{sig.relVol}x Avg</td>
+                                        <td className="vol">{formatVolume(sig.volume24h)}</td>
+                                        <td className="timestamp">{sig.timestamp.toLocaleTimeString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CryptoScreener />);
+    </script>
 </body>
 </html>
