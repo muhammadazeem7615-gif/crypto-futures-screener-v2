@@ -1,53 +1,283 @@
-//@version=5
-indicator("VWMA 20 / EMA 9 MTF Screener [Binance Futures]", overlay=true)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Futures Screener - Adaptive Kinetic Ribbon</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            margin-bottom: 25px;
+            border-bottom: 2px solid #1a1f3a;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #00ffaa;
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: #1a1f3a;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ffaa;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.idle {
+            background: #ffa500;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #0f1329;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #1a1f3a;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
 
-// Inputs
-src = input.source(close, "Source")
-vwmaLen = input.int(20, "VWMA Length")
-emaLen = input.int(9, "EMA Length")
+        select {
+            padding: 6px 12px;
+            background: #1a1f3a;
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+        
+        button {
+            padding: 6px 14px;
+            background: #1a1f3a;
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #00ffaa;
+            color: #0a0e27;
+        }
+        
+        button.active {
+            background: #00ffaa;
+            color: #0a0e27;
+        }
+        
+        .signals-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #0f1329;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .signals-table thead {
+            background: #1a1f3a;
+            border-bottom: 2px solid #2a2f4a;
+        }
+        
+        .signals-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #888;
+            border-right: 1px solid #2a2f4a;
+        }
+        
+        .signals-table th:last-child {
+            border-right: none;
+        }
+        
+        .signals-table tbody tr {
+            border-bottom: 1px solid #1a1f3a;
+            transition: background 0.2s;
+        }
+        
+        .signals-table tbody tr:hover {
+            background: #1a1f3a;
+        }
+        
+        .signals-table td {
+            padding: 12px 16px;
+            font-size: 13px;
+            border-right: 1px solid #1a1f3a;
+        }
+        
+        .signals-table td:last-child {
+            border-right: none;
+        }
+        
+        .coin-name {
+            font-weight: 600;
+            color: #fff;
+            min-width: 80px;
+        }
+        
+        .signal-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            min-width: 140px;
+            text-align: center;
+        }
+        
+        .bull-accel {
+            background: rgba(0, 255, 170, 0.2);
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+        }
+        
+        .bull-decel {
+            background: rgba(0, 100, 64, 0.2);
+            color: #00dd88;
+            border: 1px solid #00dd88;
+        }
+        
+        .bear-accel {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+        }
+        
+        .bear-decel {
+            background: rgba(139, 0, 0, 0.2);
+            color: #dd4444;
+            border: 1px solid #dd4444;
+        }
+        
+        .crossover-bull {
+            background: rgba(0, 200, 150, 0.2);
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+        }
+        
+        .crossover-bear {
+            background: rgba(255, 50, 50, 0.2);
+            color: #ff5555;
+            border: 1px solid #ff5555;
+        }
+        
+        .vwma-cross-bull {
+            background: rgba(0, 243, 255, 0.2);
+            color: #00f3ff;
+            border: 1px solid #00f3ff;
+        }
 
-// Function to calculate cross status for a given timeframe
-f_checkCrossover(tf) =>
-    r_vwma = request.security(syminfo.tickerid, tf, ta.vwma(src, vwmaLen), barmerge.gaps_off, barmerge.lookahead_off)
-    r_ema  = request.security(syminfo.tickerid, tf, ta.ema(src, emaLen), barmerge.gaps_off, barmerge.lookahead_off)
-    
-    isBullCross = ta.crossover(r_ema, r_vwma)
-    isBearCross = ta.crossunder(r_ema, r_vwma)
-    isBullish   = r_ema > r_vwma
-    
-    [isBullish, isBullCross, isBearCross]
+        .vwma-cross-bear {
+            background: rgba(255, 0, 128, 0.2);
+            color: #ff0080;
+            border: 1px solid #ff0080;
+        }
+        
+        .timeframe-badge {
+            background: #2a2f4a;
+            color: #00ffaa;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .price {
+            color: #00ffaa;
+            font-weight: 500;
+        }
 
-// Check across 1H, 2H, 4H, and 1D
-[bull1h, crossUp1h, crossDown1h] = f_checkCrossover("60")
-[bull2h, crossUp2h, crossDown2h] = f_checkCrossover("120")
-[bull4h, crossUp4h, crossDown4h] = f_checkCrossover("240")
-[bull1d, crossUp1d, crossDown1d] = f_checkCrossover("D")
-
-// Create a Table Dashboard on the Chart
-var table dash = table.new(position = position.top_right, columns = 5, rows = 2, bgcolor = color.new(color.black, 20), border_width = 1, border_color = color.gray)
-
-if barstate.islast
-    // Header Row
-    table.cell(dash, 0, 0, "Timeframe", text_color=color.white, text_size=size.small)
-    table.cell(dash, 1, 0, "1H", text_color=color.white, text_size=size.small)
-    table.cell(dash, 2, 0, "2H", text_color=color.white, text_size=size.small)
-    table.cell(dash, 3, 0, "4H", text_color=color.white, text_size=size.small)
-    table.cell(dash, 4, 0, "1D", text_color=color.white, text_size=size.small)
-
-    // Status Row
-    table.cell(dash, 0, 1, "Status", text_color=color.white, text_size=size.small)
-    
-    // Inline rendering logic to avoid scope/syntax compilation bugs
-    f_render(col, bullish, cUp, cDown) =>
-        txt = bullish ? "BULLISH" : "BEARISH"
-        if cUp
-            txt := "🟢 CROSS UP"
-        if cDown
-            txt := "🔴 CROSS DN"
-        bg = cUp ? color.green : cDown ? color.red : (bullish ? color.new(color.green, 70) : color.new(color.red, 70))
-        table.cell(dash, col, 1, txt, text_color=color.white, bgcolor=bg, text_size=size.small)
-
-    f_render(1, bull1h, crossUp1h, crossDown1h)
-    f_render(2, bull2h, crossUp2h, crossDown2h)
-    f_render(3, bull4h, crossUp4h, crossDown4h)
-    f_render(4, bull1d, crossUp1d, crossDown1d)
+        .vol {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
