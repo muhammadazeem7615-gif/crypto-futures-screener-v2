@@ -525,10 +525,10 @@
 
                     const exchangeInfo = await fetchBinance('https://fapi.binance.com/fapi/v1/exchangeInfo');
                     const symbols = exchangeInfo && exchangeInfo.symbols
-                        ? exchangeInfo.symbols.filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT').map(s => s.symbol).slice(0, 60)
+                        ? exchangeInfo.symbols.filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT').map(s => s.symbol)
                         : [];
 
-                    const batchSize = 5;
+                    const batchSize = 10;
                     for (let i = 0; i < symbols.length; i += batchSize) {
                         const batch = symbols.slice(i, i + batchSize);
                         await Promise.all(batch.map(async (symbol) => {
@@ -598,7 +598,7 @@
 
                 let signalMatch = true;
                 if (filterSignalType === 'crossovers') {
-                    signalMatch = s.signal.includes('Crossover') || s.signal.includes('Cross');
+                    signalMatch = s.signal === 'Bullish Crossover' || s.signal === 'Bearish Crossover';
                 } else if (filterSignalType === 'crossover-bull') {
                     signalMatch = s.signal === 'Bullish Crossover';
                 } else if (filterSignalType === 'crossover-bear') {
@@ -617,14 +617,14 @@
             });
 
             const getSignalClass = (signal) => {
-                if (signal.includes('Bullish Crossover')) return 'crossover-bull';
-                if (signal.includes('Bearish Crossover')) return 'crossover-bear';
-                if (signal.includes('Bullish Acceleration')) return 'bull-accel';
-                if (signal.includes('Bullish Deceleration')) return 'bull-decel';
-                if (signal.includes('Bearish Acceleration')) return 'bear-accel';
-                if (signal.includes('Bearish Deceleration')) return 'bear-decel';
-                if (signal.includes('EMA 9 / VWMA 20 Bullish Cross')) return 'vwma-cross-bull';
-                if (signal.includes('EMA 9 / VWMA 20 Bearish Cross')) return 'vwma-cross-bear';
+                if (signal === 'Bullish Crossover') return 'crossover-bull';
+                if (signal === 'Bearish Crossover') return 'crossover-bear';
+                if (signal === 'Bullish Acceleration') return 'bull-accel';
+                if (signal === 'Bullish Deceleration') return 'bull-decel';
+                if (signal === 'Bearish Acceleration') return 'bear-accel';
+                if (signal === 'Bearish Deceleration') return 'bear-decel';
+                if (signal === 'EMA 9 / VWMA 20 Bullish Cross') return 'vwma-cross-bull';
+                if (signal === 'EMA 9 / VWMA 20 Bearish Cross') return 'vwma-cross-bear';
                 return '';
             };
 
@@ -692,13 +692,13 @@
                                 <label>Signal Type:</label>
                                 <select value={filterSignalType} onChange={(e) => setFilterSignalType(e.target.value)}>
                                     <option value="all">All Signals</option>
-                                    <option value="crossovers">All Crossovers (Bull & Bear)</option>
-                                    <option value="crossover-bull">Bullish Crossovers Only</option>
-                                    <option value="crossover-bear">Bearish Crossovers Only</option>
-                                    <option value="accelerations">All Accelerations (Bull & Bear)</option>
-                                    <option value="accel-bull">Bullish Acceleration Only</option>
-                                    <option value="accel-bear">Bearish Acceleration Only</option>
-                                    <option value="vwma-cross">EMA 9 & VWMA 20 Cross</option>
+                                    <option value="crossovers">Crossovers Only</option>
+                                    <option value="crossover-bull">Bullish Crossover</option>
+                                    <option value="crossover-bear">Bearish Crossover</option>
+                                    <option value="accelerations">Accelerations Only</option>
+                                    <option value="accel-bull">Bullish Acceleration</option>
+                                    <option value="accel-bear">Bearish Acceleration</option>
+                                    <option value="vwma-cross">EMA 9 / VWMA 20 Cross</option>
                                 </select>
                             </div>
 
