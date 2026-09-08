@@ -201,6 +201,12 @@
             border: 1px solid var(--bearish-color);
         }
 
+        .tag-zerocross {
+            background-color: rgba(22, 185, 229, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
         .recency-badge {
             font-weight: bold;
             color: var(--neutral-color);
@@ -243,6 +249,8 @@
                 <option value="trend_starts" selected>Neutral ➔ Bull/Bear Starts</option>
                 <option value="bullish_starts">Neutral ➔ Bullish Only</option>
                 <option value="bearish_starts">Neutral ➔ Bearish Only</option>
+                <option value="bear_to_zero">Bearish to Zero Cross (Upward)</option>
+                <option value="bull_to_zero">Bullish to Zero Cross (Downward)</option>
             </select>
         </div>
 
@@ -428,37 +436,51 @@
                         const currentPrice = closes[closes.length - 1];
 
                         const history = calculateIndicatorHistory(closes, settings);
-                        if (history.length === 0) return;
+                        if (history.length < 2) return;
 
                         const latestState = history[history.length - 1];
                         
-                        let isTrendStart = false;
+                        let qualifies = false;
                         let barsAgo = 0;
                         let transitionType = "";
 
-                        // Patched Trend Start & Age Offset Logic
-                        if (latestState.state !== 0) {
-                            let startIndex = history.length - 1;
-                            while (startIndex > 0 && history[startIndex - 1].state === latestState.state) {
-                                startIndex--;
-                            }
-                            if (startIndex > 0 && history[startIndex - 1].state === 0) {
-                                isTrendStart = true;
-                                barsAgo = (history.length - 1) - startIndex;
-                            }
-                        }
+                        if (signalFilter === 'bear_to_zero' || signalFilter === 'bull_to_zero') {
+                            const prevConsensus = history[history.length - 2].consensus;
+                            const currConsensus = latestState.consensus;
 
-                        let qualifies = false;
-                        if (isTrendStart && barsAgo <= maxTrendAge) {
-                            if (signalFilter === 'trend_starts') {
+                            if (signalFilter === 'bear_to_zero' && prevConsensus < 0 && currConsensus >= 0) {
                                 qualifies = true;
-                                transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
-                            } else if (signalFilter === 'bullish_starts' && latestState.state === 1) {
+                                transitionType = "Bearish ➔ Zero Cross";
+                                barsAgo = 0;
+                            } else if (signalFilter === 'bull_to_zero' && prevConsensus > 0 && currConsensus <= 0) {
                                 qualifies = true;
-                                transitionType = "Neutral ➔ Bullish";
-                            } else if (signalFilter === 'bearish_starts' && latestState.state === -1) {
-                                qualifies = true;
-                                transitionType = "Neutral ➔ Bearish";
+                                transitionType = "Bullish ➔ Zero Cross";
+                                barsAgo = 0;
+                            }
+                        } else {
+                            let isTrendStart = false;
+                            if (latestState.state !== 0) {
+                                let startIndex = history.length - 1;
+                                while (startIndex > 0 && history[startIndex - 1].state === latestState.state) {
+                                    startIndex--;
+                                }
+                                if (startIndex > 0 && history[startIndex - 1].state === 0) {
+                                    isTrendStart = true;
+                                    barsAgo = (history.length - 1) - startIndex;
+                                }
+                            }
+
+                            if (isTrendStart && barsAgo <= maxTrendAge) {
+                                if (signalFilter === 'trend_starts') {
+                                    qualifies = true;
+                                    transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
+                                } else if (signalFilter === 'bullish_starts' && latestState.state === 1) {
+                                    qualifies = true;
+                                    transitionType = "Neutral ➔ Bullish";
+                                } else if (signalFilter === 'bearish_starts' && latestState.state === -1) {
+                                    qualifies = true;
+                                    transitionType = "Neutral ➔ Bearish";
+                                }
                             }
                         }
 
@@ -488,10 +510,13 @@
             results.sort((a, b) => a.barsAgo - b.barsAgo);
 
             if (results.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria within the selected trend age.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria within the selected filters.</td></tr>`;
             } else {
                 tbody.innerHTML = results.map(r => {
-                    const tagClass = r.transitionType.includes('Bullish') ? 'tag-bullish' : 'tag-bearish';
+                    let tagClass = 'tag-bearish';
+                    if (r.transitionType.includes('Bullish')) tagClass = 'tag-bullish';
+                    else if (r.transitionType.includes('Zero Cross')) tagClass = 'tag-zerocross';
+
                     return `
                         <tr>
                             <td><strong>${r.symbol}</strong></td>
