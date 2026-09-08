@@ -291,7 +291,7 @@
 </div>
 
 <script>
-    // --- EXACT Spearman Rank Logic (Untouched) ---
+    // --- EXACT Spearman Rank Logic (Untouched Core Math) ---
     function f_spearman(s, len) {
         if (s.length < len) return null;
         
@@ -411,7 +411,6 @@
             
             const results = [];
             let processed = 0;
-            let passedVolCount = usdtPairs.length;
 
             const BATCH_SIZE = 8;
             for (let i = 0; i < usdtPairs.length; i += BATCH_SIZE) {
@@ -434,29 +433,34 @@
                         const latestState = history[history.length - 1];
                         
                         let isTrendStart = false;
-                        let transitionType = "";
                         let barsAgo = 0;
+                        let transitionType = "";
 
+                        // Patched Trend Start & Age Offset Logic
                         if (latestState.state !== 0) {
-                            for (let h = history.length - 1; h > 0; h--) {
-                                if (history[h].state === latestState.state && history[h - 1].state === 0) {
-                                    const detectedBarsAgo = (history.length - 1) - h;
-                                    if (detectedBarsAgo <= maxTrendAge) {
-                                        isTrendStart = true;
-                                        transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
-                                        barsAgo = detectedBarsAgo;
-                                    }
-                                    break;
-                                } else if (history[h].state !== latestState.state) {
-                                    break;
-                                }
+                            let startIndex = history.length - 1;
+                            while (startIndex > 0 && history[startIndex - 1].state === latestState.state) {
+                                startIndex--;
+                            }
+                            if (startIndex > 0 && history[startIndex - 1].state === 0) {
+                                isTrendStart = true;
+                                barsAgo = (history.length - 1) - startIndex;
                             }
                         }
 
                         let qualifies = false;
-                        if (signalFilter === 'trend_starts' && isTrendStart) qualifies = true;
-                        else if (signalFilter === 'bullish_starts' && isTrendStart && latestState.state === 1) qualifies = true;
-                        else if (signalFilter === 'bearish_starts' && isTrendStart && latestState.state === -1) qualifies = true;
+                        if (isTrendStart && barsAgo <= maxTrendAge) {
+                            if (signalFilter === 'trend_starts') {
+                                qualifies = true;
+                                transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
+                            } else if (signalFilter === 'bullish_starts' && latestState.state === 1) {
+                                qualifies = true;
+                                transitionType = "Neutral ➔ Bullish";
+                            } else if (signalFilter === 'bearish_starts' && latestState.state === -1) {
+                                qualifies = true;
+                                transitionType = "Neutral ➔ Bearish";
+                            }
+                        }
 
                         if (qualifies) {
                             results.push({
@@ -468,7 +472,7 @@
                             });
                         }
                     } catch (e) {
-                        // Skip individual symbol error
+                        // Skip individual symbol error securely without crashing batch
                     }
                 }));
 
@@ -487,7 +491,7 @@
                 tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria within the selected trend age.</td></tr>`;
             } else {
                 tbody.innerHTML = results.map(r => {
-                    const tagClass = r.transitionType.includes('➔ Bullish') ? 'tag-bullish' : 'tag-bearish';
+                    const tagClass = r.transitionType.includes('Bullish') ? 'tag-bullish' : 'tag-bearish';
                     return `
                         <tr>
                             <td><strong>${r.symbol}</strong></td>
