@@ -198,13 +198,13 @@
             font-size: 0.75rem;
         }
 
-        .tag-bull-neutral {
+        .tag-bullish {
             background-color: rgba(14, 203, 129, 0.15);
             color: var(--bullish-color);
             border: 1px solid var(--bullish-color);
         }
 
-        .tag-bear-neutral {
+        .tag-bearish {
             background-color: rgba(246, 70, 93, 0.15);
             color: var(--bearish-color);
             border: 1px solid var(--bearish-color);
@@ -272,19 +272,19 @@
         <div class="control-group">
             <label>Signal Filter</label>
             <select id="signal-filter">
-                <option value="neutral_flips" selected>Trend Neutral Flips Only</option>
-                <option value="bullish">Bullish Only</option>
-                <option value="bearish">Bearish Only</option>
+                <option value="trend_starts" selected>New Trend Starts (Neutral ➔ Bull/Bear)</option>
+                <option value="bullish_starts">Neutral ➔ Bullish Only</option>
+                <option value="bearish_starts">Neutral ➔ Bearish Only</option>
                 <option value="all">All Scanned Pairs</option>
             </select>
         </div>
 
         <div class="control-group">
-            <label>Max Neutral Age</label>
-            <select id="max-neutral-age">
-                <option value="5">Within Last 5 Bars</option>
-                <option value="10" selected>Within Last 10 Bars</option>
-                <option value="20">Within Last 20 Bars</option>
+            <label>Max Trend Age</label>
+            <select id="max-trend-age">
+                <option value="5">Started Within Last 5 Bars</option>
+                <option value="10" selected>Started Within Last 10 Bars</option>
+                <option value="20">Started Within Last 20 Bars</option>
                 <option value="999">Any Age</option>
             </select>
         </div>
@@ -309,7 +309,7 @@
                     <th>Symbol</th>
                     <th>Price (USDT)</th>
                     <th>Transition / Signal</th>
-                    <th>Flipped Ago (Recency)</th>
+                    <th>Started Ago (Recency)</th>
                     <th>Consensus</th>
                     <th>Conviction</th>
                     <th>24h Volume</th>
@@ -446,7 +446,7 @@
         const timeframe = document.getElementById('timeframe').value;
         const preset = document.getElementById('preset').value;
         const signalFilter = document.getElementById('signal-filter').value;
-        const maxNeutralAge = parseInt(document.getElementById('max-neutral-age').value, 10);
+        const maxTrendAge = parseInt(document.getElementById('max-trend-age').value, 10);
         const settings = getPresetSettings(preset);
 
         const baseUrl = marketType === 'futures' ? 'https://fapi.binance.com' : 'https://api.binance.com';
@@ -509,21 +509,24 @@
 
                         const latestState = history[history.length - 1];
                         
-                        // Detect Neutral Flip Recency
-                        let isNeutralFlip = false;
+                        // Detect Active Trend Starts (Neutral -> Bullish / Bearish)
+                        let isTrendStart = false;
                         let transitionType = "";
                         let barsAgo = 0;
 
-                        if (latestState.state === 0) {
-                            // Scan backwards to find the exact bar where state flipped to 0
+                        if (latestState.state !== 0) {
+                            // Scan backwards to find where this current trend started from Neutral (0)
                             for (let h = history.length - 1; h > 0; h--) {
-                                if (history[h].state === 0 && history[h - 1].state !== 0) {
+                                if (history[h].state === latestState.state && history[h - 1].state === 0) {
                                     const detectedBarsAgo = (history.length - 1) - h;
-                                    if (detectedBarsAgo <= maxNeutralAge) {
-                                        isNeutralFlip = true;
-                                        transitionType = history[h - 1].state === 1 ? "Bullish ➔ Neutral" : "Bearish ➔ Neutral";
+                                    if (detectedBarsAgo <= maxTrendAge) {
+                                        isTrendStart = true;
+                                        transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
                                         barsAgo = detectedBarsAgo;
                                     }
+                                    break;
+                                } else if (history[h].state !== latestState.state) {
+                                    // Trend was previously something else (like Bearish -> Bullish without Neutral). Break loop.
                                     break;
                                 }
                             }
@@ -531,9 +534,9 @@
 
                         // Apply User Signal Filter
                         let qualifies = false;
-                        if (signalFilter === 'neutral_flips' && isNeutralFlip) qualifies = true;
-                        else if (signalFilter === 'bullish' && latestState.state === 1) qualifies = true;
-                        else if (signalFilter === 'bearish' && latestState.state === -1) qualifies = true;
+                        if (signalFilter === 'trend_starts' && isTrendStart) qualifies = true;
+                        else if (signalFilter === 'bullish_starts' && isTrendStart && latestState.state === 1) qualifies = true;
+                        else if (signalFilter === 'bearish_starts' && isTrendStart && latestState.state === -1) qualifies = true;
                         else if (signalFilter === 'all') qualifies = true;
 
                         if (qualifies) {
@@ -541,8 +544,8 @@
                                 symbol,
                                 price: currentPrice,
                                 currentState: latestState.state,
-                                transitionType: isNeutralFlip ? transitionType : (latestState.state === 1 ? "Bullish" : latestState.state === -1 ? "Bearish" : "Neutral"),
-                                isNeutralFlip,
+                                transitionType: isTrendStart ? transitionType : (latestState.state === 1 ? "Active Bullish" : latestState.state === -1 ? "Active Bearish" : "Neutral"),
+                                isTrendStart,
                                 barsAgo,
                                 consensus: latestState.consensus,
                                 conviction: latestState.conviction,
@@ -565,11 +568,11 @@
                 await sleep(60);
             }
 
-            // Primary Sorting: Newest Neutral Flips First (barsAgo ascending)
+            // Primary Sorting: Newest Trend Starts First (barsAgo ascending)
             results.sort((a, b) => {
-                if (a.isNeutralFlip && b.isNeutralFlip) return a.barsAgo - b.barsAgo;
-                if (a.isNeutralFlip) return -1;
-                if (b.isNeutralFlip) return 1;
+                if (a.isTrendStart && b.isTrendStart) return a.barsAgo - b.barsAgo;
+                if (a.isTrendStart) return -1;
+                if (b.isTrendStart) return 1;
                 return Math.abs(b.consensus) - Math.abs(a.consensus);
             });
 
@@ -579,17 +582,15 @@
             } else {
                 tbody.innerHTML = results.map(r => {
                     let tagClass = 'tag-neutral';
-                    if (r.transitionType.includes('Bullish ➔ Neutral')) tagClass = 'tag-bull-neutral';
-                    else if (r.transitionType.includes('Bearish ➔ Neutral')) tagClass = 'tag-bear-neutral';
-                    else if (r.currentState === 1) tagClass = 'tag-bull-neutral';
-                    else if (r.currentState === -1) tagClass = 'tag-bear-neutral';
+                    if (r.transitionType.includes('➔ Bullish') || r.currentState === 1) tagClass = 'tag-bullish';
+                    else if (r.transitionType.includes('➔ Bearish') || r.currentState === -1) tagClass = 'tag-bearish';
 
                     return `
                         <tr>
                             <td><strong>${r.symbol}</strong></td>
                             <td>$${r.price < 1 ? r.price.toFixed(6) : r.price.toFixed(2)}</td>
                             <td><span class="tag ${tagClass}">${r.transitionType}</span></td>
-                            <td>${r.isNeutralFlip ? formatBarsAgo(r.barsAgo, timeframe) : '-'}</td>
+                            <td>${r.isTrendStart ? formatBarsAgo(r.barsAgo, timeframe) : '-'}</td>
                             <td style="color: ${r.consensus > 0 ? 'var(--bullish-color)' : r.consensus < 0 ? 'var(--bearish-color)' : 'var(--text-main)'}">${r.consensus.toFixed(3)}</td>
                             <td>${r.conviction.toFixed(0)}%</td>
                             <td>${formatNumber(r.vol24h)}</td>
