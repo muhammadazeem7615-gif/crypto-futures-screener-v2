@@ -246,6 +246,15 @@
             </select>
         </div>
 
+        <div class="control-group">
+            <label>Max Trend Age</label>
+            <select id="max-trend-age">
+                <option value="0">Current Bar Only (0)</option>
+                <option value="1">Up to 1 Bar Ago</option>
+                <option value="2" selected>Up to 2 Bars Ago</option>
+            </select>
+        </div>
+
         <button id="scan-btn" class="btn-primary" onclick="startScan()">Run Scanner</button>
     </div>
 
@@ -379,6 +388,7 @@
         const timeframe = document.getElementById('timeframe').value;
         const preset = document.getElementById('preset').value;
         const signalFilter = document.getElementById('signal-filter').value;
+        const maxTrendAge = parseInt(document.getElementById('max-trend-age').value, 10);
         const settings = getPresetSettings(preset);
 
         const baseUrl = 'https://fapi.binance.com';
@@ -392,7 +402,6 @@
             const tickerRes = await fetch(baseUrl + tickerEndpoint);
             const tickers = await tickerRes.json();
 
-            // Filter for USDT pairs with >= 1,000,000 USDT 24hr quote volume
             const usdtPairs = tickers.filter(t => 
                 t.symbol.endsWith('USDT') && 
                 parseFloat(t.quoteVolume) >= 1000000
@@ -431,9 +440,12 @@
                         if (latestState.state !== 0) {
                             for (let h = history.length - 1; h > 0; h--) {
                                 if (history[h].state === latestState.state && history[h - 1].state === 0) {
-                                    isTrendStart = true;
-                                    transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
-                                    barsAgo = (history.length - 1) - h;
+                                    const detectedBarsAgo = (history.length - 1) - h;
+                                    if (detectedBarsAgo <= maxTrendAge) {
+                                        isTrendStart = true;
+                                        transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
+                                        barsAgo = detectedBarsAgo;
+                                    }
                                     break;
                                 } else if (history[h].state !== latestState.state) {
                                     break;
@@ -472,7 +484,7 @@
             results.sort((a, b) => a.barsAgo - b.barsAgo);
 
             if (results.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria within the selected trend age.</td></tr>`;
             } else {
                 tbody.innerHTML = results.map(r => {
                     const tagClass = r.transitionType.includes('➔ Bullish') ? 'tag-bullish' : 'tag-bearish';
