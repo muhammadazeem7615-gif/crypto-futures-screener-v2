@@ -77,7 +77,7 @@
             text-transform: uppercase;
         }
 
-        select, button {
+        select, input, button {
             background-color: var(--bg-color);
             color: var(--text-main);
             border: 1px solid var(--border-color);
@@ -85,11 +85,10 @@
             border-radius: 6px;
             font-size: 0.9rem;
             outline: none;
-            cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        select:focus {
+        select:focus, input:focus {
             border-color: var(--accent-blue);
         }
 
@@ -98,6 +97,7 @@
             color: #000;
             font-weight: bold;
             border: none;
+            cursor: pointer;
             margin-top: auto;
         }
 
@@ -179,6 +179,16 @@
 
         tr:hover {
             background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .section-header td {
+            background-color: rgba(22, 185, 229, 0.08);
+            color: var(--accent-blue);
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 16px;
         }
 
         .tag {
@@ -264,6 +274,11 @@
             </select>
         </div>
 
+        <div class="control-group">
+            <label>Quick Symbol Search</label>
+            <input type="text" id="symbol-search" placeholder="e.g. BTC, ETH, SOL..." oninput="renderTable()">
+        </div>
+
         <button id="scan-btn" class="btn-primary" onclick="startScan()">Run Scanner</button>
     </div>
 
@@ -283,6 +298,7 @@
                 <tr>
                     <th>Symbol</th>
                     <th>Price (USDT)</th>
+                    <th>24h Change</th>
                     <th>Signal</th>
                     <th>Started Ago</th>
                     <th>Conviction</th>
@@ -290,7 +306,7 @@
             </thead>
             <tbody id="results-body">
                 <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
                         Click "Run Scanner" to fetch live Binance Futures data.
                     </td>
                 </tr>
@@ -385,6 +401,7 @@
 
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     let isScanning = false;
+    let globalResults = [];
 
     async function startScan() {
         if (isScanning) return;
@@ -405,7 +422,7 @@
         const klineEndpoint = '/fapi/v1/klines';
 
         const tbody = document.getElementById('results-body');
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">Fetching Binance Futures universe...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Fetching Binance Futures universe...</td></tr>`;
 
         try {
             const tickerRes = await fetch(baseUrl + tickerEndpoint);
@@ -418,7 +435,7 @@
 
             document.getElementById('stat-total').innerText = tickers.length;
             
-            const results = [];
+            globalResults = [];
             let processed = 0;
 
             const BATCH_SIZE = 8;
@@ -428,6 +445,7 @@
                 await Promise.all(batch.map(async (ticker) => {
                     try {
                         const symbol = ticker.symbol;
+                        const priceChangePercent = parseFloat(ticker.priceChangePercent);
                         const klineRes = await fetch(`${baseUrl}${klineEndpoint}?symbol=${symbol}&interval=${timeframe}&limit=200`);
                         const klines = await klineRes.json();
 
@@ -461,50 +479,59 @@
 
                         let qualifies = false;
                         let transitionType = "";
+                        let category = "";
 
                         if (signalFilter === 'all_master') {
                             if (isUpwardCross) {
                                 qualifies = true;
                                 transitionType = "Bearish ➔ Zero Cross (Up)";
+                                category = "early";
                                 barsAgo = 0;
                             } else if (isDownwardCross) {
                                 qualifies = true;
                                 transitionType = "Bullish ➔ Zero Cross (Down)";
+                                category = "early";
                                 barsAgo = 0;
                             } else if (isTrendStart && barsAgo <= maxTrendAge) {
                                 qualifies = true;
                                 transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
+                                category = "confirmed";
                             }
                         } else if (signalFilter === 'bear_to_zero') {
-                            if (isUpwardCross) { qualifies = true; transitionType = "Bearish ➔ Zero Cross"; barsAgo = 0; }
+                            if (isUpwardCross) { qualifies = true; transitionType = "Bearish ➔ Zero Cross"; category = "early"; barsAgo = 0; }
                         } else if (signalFilter === 'bull_to_zero') {
-                            if (isDownwardCross) { qualifies = true; transitionType = "Bullish ➔ Zero Cross"; barsAgo = 0; }
+                            if (isDownwardCross) { qualifies = true; transitionType = "Bullish ➔ Zero Cross"; category = "early"; barsAgo = 0; }
                         } else {
                             if (isTrendStart && barsAgo <= maxTrendAge) {
                                 if (signalFilter === 'trend_starts') {
                                     qualifies = true;
                                     transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
+                                    category = "confirmed";
                                 } else if (signalFilter === 'bullish_starts' && latestState.state === 1) {
                                     qualifies = true;
                                     transitionType = "Neutral ➔ Bullish";
+                                    category = "confirmed";
                                 } else if (signalFilter === 'bearish_starts' && latestState.state === -1) {
                                     qualifies = true;
                                     transitionType = "Neutral ➔ Bearish";
+                                    category = "confirmed";
                                 }
                             }
                         }
 
                         if (qualifies) {
-                            results.push({
+                            globalResults.push({
                                 symbol,
                                 price: currentPrice,
+                                priceChangePercent,
                                 transitionType,
+                                category,
                                 barsAgo,
                                 conviction: latestState.conviction
                             });
                         }
                     } catch (e) {
-                        // Skip individual symbol error securely without crashing batch
+                        // Skip individual symbol error securely
                     }
                 }));
 
@@ -512,43 +539,74 @@
                 const progressPct = Math.min(100, (processed / usdtPairs.length) * 100);
                 document.getElementById('progress-bar').style.width = progressPct + '%';
                 document.getElementById('stat-passed-vol').innerText = usdtPairs.length;
-                document.getElementById('stat-signals').innerText = results.length;
+                document.getElementById('stat-signals').innerText = globalResults.length;
 
                 await sleep(60);
             }
 
-            results.sort((a, b) => a.barsAgo - b.barsAgo);
-
-            if (results.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched the criteria within the selected filters.</td></tr>`;
-            } else {
-                tbody.innerHTML = results.map(r => {
-                    let tagClass = 'tag-bearish';
-                    if (r.transitionType.includes('Bullish') || r.transitionType.includes('Up')) tagClass = 'tag-bullish';
-                    if (r.transitionType.includes('Zero Cross')) tagClass = 'tag-zerocross';
-                    if (r.transitionType.includes('Bearish')) tagClass = 'tag-bearish';
-
-                    return `
-                        <tr>
-                            <td><strong>${r.symbol}</strong></td>
-                            <td>$${r.price < 1 ? r.price.toFixed(6) : r.price.toFixed(2)}</td>
-                            <td><span class="tag ${tagClass}">${r.transitionType}</span></td>
-                            <td>${formatBarsAgo(r.barsAgo)}</td>
-                            <td>${r.conviction.toFixed(0)}%</td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
+            renderTable();
             document.getElementById('last-updated').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
 
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--bearish-color); padding: 30px;">Error fetching Binance Futures data. Check network connection.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--bearish-color); padding: 30px;">Error fetching Binance Futures data. Check network connection.</td></tr>`;
         } finally {
             isScanning = false;
             scanBtn.disabled = false;
             scanBtn.innerText = "Run Scanner";
         }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('results-body');
+        const searchTerm = document.getElementById('symbol-search').value.trim().toUpperCase();
+
+        let filtered = globalResults.filter(r => r.symbol.includes(searchTerm));
+        filtered.sort((a, b) => a.barsAgo - b.barsAgo);
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">No Binance Futures matched your search or filter criteria.</td></tr>`;
+            return;
+        }
+
+        // Separate into visual sections if Master View
+        const earlyWarnings = filtered.filter(r => r.category === 'early');
+        const confirmedTrends = filtered.filter(r => r.category === 'confirmed');
+
+        let html = '';
+
+        const buildRows = (items) => {
+            return items.map(r => {
+                let tagClass = 'tag-bearish';
+                if (r.transitionType.includes('Bullish') || r.transitionType.includes('Up')) tagClass = 'tag-bullish';
+                if (r.transitionType.includes('Zero Cross')) tagClass = 'tag-zerocross';
+                if (r.transitionType.includes('Bearish')) tagClass = 'tag-bearish';
+
+                const changeColor = r.priceChangePercent >= 0 ? 'var(--bullish-color)' : 'var(--bearish-color)';
+                const changeSign = r.priceChangePercent >= 0 ? '+' : '';
+
+                return `
+                    <tr>
+                        <td><strong>${r.symbol}</strong></td>
+                        <td>$${r.price < 1 ? r.price.toFixed(6) : r.price.toFixed(2)}</td>
+                        <td style="color: ${changeColor}; font-weight: 600;">${changeSign}${r.priceChangePercent.toFixed(2)}%</td>
+                        <td><span class="tag ${tagClass}">${r.transitionType}</span></td>
+                        <td>${formatBarsAgo(r.barsAgo)}</td>
+                        <td>${r.conviction.toFixed(0)}%</td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        if (earlyWarnings.length > 0 && confirmedTrends.length > 0) {
+            html += `<tr class="section-header"><td colspan="6">⚡ Early Warnings (Zero-Line Crosses)</td></tr>`;
+            html += buildRows(earlyWarnings);
+            html += `<tr class="section-header"><td colspan="6">🚀 Confirmed Trend Breakouts</td></tr>`;
+            html += buildRows(confirmedTrends);
+        } else {
+            html += buildRows(filtered);
+        }
+
+        tbody.innerHTML = html;
     }
 </script>
 
