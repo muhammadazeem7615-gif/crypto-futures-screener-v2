@@ -191,6 +191,16 @@
             padding: 10px 16px;
         }
 
+        .section-header-neutral td {
+            background-color: rgba(240, 185, 11, 0.08);
+            color: var(--neutral-color);
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 16px;
+        }
+
         .tag {
             display: inline-block;
             padding: 4px 8px;
@@ -256,11 +266,9 @@
         <div class="control-group">
             <label>Signal Filter</label>
             <select id="signal-filter">
-                <option value="all_master" selected>All Signals (Master View)</option>
-                <option value="trend_starts">Neutral ➔ Trend Starts Only</option>
-                <option value="bullish_starts">Neutral ➔ Bullish Only</option>
-                <option value="bearish_starts">Neutral ➔ Bearish Only</option>
-                <option value="entering_neutral">Entering Neutral State</option>
+                <option value="all_master" selected>All Signals & Neutral (Master View)</option>
+                <option value="trend_starts">Confirmed Trend Breakouts Only</option>
+                <option value="pure_neutral">Pure Neutral State Only</option>
             </select>
         </div>
 
@@ -288,7 +296,7 @@
     <div class="stats-bar">
         <div class="stat-item"><span>Total Evaluated:</span> <strong id="stat-total">0</strong></div>
         <div class="stat-item"><span>Passed Vol Filter (> $1M 24h):</span> <strong id="stat-passed-vol">0</strong></div>
-        <div class="stat-item"><span>Qualifying Signals:</span> <strong id="stat-signals">0</strong></div>
+        <div class="stat-item"><span>Qualifying Items:</span> <strong id="stat-signals">0</strong></div>
     </div>
 
     <div class="table-container">
@@ -298,8 +306,8 @@
                     <th>Symbol</th>
                     <th>Price (USDT)</th>
                     <th>24h Change</th>
-                    <th>Signal</th>
-                    <th>Started Ago</th>
+                    <th>State / Signal</th>
+                    <th>Status</th>
                     <th>Conviction</th>
                 </tr>
             </thead>
@@ -393,7 +401,8 @@
         return states;
     }
 
-    function formatBarsAgo(barsAgo) {
+    function formatBarsAgo(barsAgo, isNeutral) {
+        if (isNeutral) return `<span class="recency-badge" style="color: var(--neutral-color);">CURRENTLY NEUTRAL</span>`;
         if (barsAgo === 0) return `<span class="recency-badge" style="color: #00ffaa;">CURRENT BAR (0)</span>`;
         return `<span class="recency-badge">${barsAgo} BAR${barsAgo > 1 ? 'S' : ''} AGO</span>`;
     }
@@ -472,19 +481,8 @@
                             }
                         }
 
-                        // Check for Transition Into Neutral (from Bullish or Bearish)
-                        let isEnteringNeutral = false;
-                        let neutralBarsAgo = 0;
-                        if (latestState.state === 0) {
-                            let startIndex = history.length - 1;
-                            while (startIndex > 0 && history[startIndex - 1].state === 0) {
-                                startIndex--;
-                            }
-                            if (startIndex > 0 && history[startIndex - 1].state !== 0) {
-                                isEnteringNeutral = true;
-                                neutralBarsAgo = (history.length - 1) - startIndex;
-                            }
-                        }
+                        // Pure Neutral Check (Current bar state is 0)
+                        let isPureNeutral = (latestState.state === 0);
 
                         let qualifies = false;
                         let transitionType = "";
@@ -495,9 +493,9 @@
                                 qualifies = true;
                                 transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
                                 category = "trend";
-                            } else if (isEnteringNeutral && neutralBarsAgo <= maxTrendAge) {
+                            } else if (isPureNeutral) {
                                 qualifies = true;
-                                transitionType = "Active Trend ➔ Neutral";
+                                transitionType = "Neutral State";
                                 category = "neutral";
                             }
                         } else if (signalFilter === 'trend_starts') {
@@ -506,28 +504,16 @@
                                 transitionType = latestState.state === 1 ? "Neutral ➔ Bullish" : "Neutral ➔ Bearish";
                                 category = "trend";
                             }
-                        } else if (signalFilter === 'bullish_starts') {
-                            if (isTrendStart && trendBarsAgo <= maxTrendAge && latestState.state === 1) {
+                        } else if (signalFilter === 'pure_neutral') {
+                            if (isPureNeutral) {
                                 qualifies = true;
-                                transitionType = "Neutral ➔ Bullish";
-                                category = "trend";
-                            }
-                        } else if (signalFilter === 'bearish_starts') {
-                            if (isTrendStart && trendBarsAgo <= maxTrendAge && latestState.state === -1) {
-                                qualifies = true;
-                                transitionType = "Neutral ➔ Bearish";
-                                category = "trend";
-                            }
-                        } else if (signalFilter === 'entering_neutral') {
-                            if (isEnteringNeutral && neutralBarsAgo <= maxTrendAge) {
-                                qualifies = true;
-                                transitionType = "Active Trend ➔ Neutral";
+                                transitionType = "Neutral State";
                                 category = "neutral";
                             }
                         }
 
                         if (qualifies) {
-                            const finalBarsAgo = category === "trend" ? trendBarsAgo : neutralBarsAgo;
+                            const finalBarsAgo = category === "trend" ? trendBarsAgo : 0;
                             globalResults.push({
                                 symbol,
                                 price: currentPrice,
@@ -577,11 +563,11 @@
         }
 
         const trendBreakouts = filtered.filter(r => r.category === 'trend');
-        const neutralTransitions = filtered.filter(r => r.category === 'neutral');
+        const pureNeutralList = filtered.filter(r => r.category === 'neutral');
 
         let html = '';
 
-        const buildRows = (items) => {
+        const buildRows = (items, isNeutralList = false) => {
             return items.map(r => {
                 let tagClass = 'tag-neutral';
                 if (r.transitionType.includes('Bullish')) tagClass = 'tag-bullish';
@@ -596,20 +582,21 @@
                         <td>$${r.price < 1 ? r.price.toFixed(6) : r.price.toFixed(2)}</td>
                         <td style="color: ${changeColor}; font-weight: 600;">${changeSign}${r.priceChangePercent.toFixed(2)}%</td>
                         <td><span class="tag ${tagClass}">${r.transitionType}</span></td>
-                        <td>${formatBarsAgo(r.barsAgo)}</td>
+                        <td>${formatBarsAgo(r.barsAgo, isNeutralList)}</td>
                         <td>${r.conviction.toFixed(0)}%</td>
                     </tr>
                 `;
             }).join('');
         };
 
-        if (trendBreakouts.length > 0 && neutralTransitions.length > 0) {
-            html += `<tr class="section-header"><td colspan="6">🚀 Neutral ➔ Trend Breakouts</td></tr>`;
-            html += buildRows(trendBreakouts);
-            html += `<tr class="section-header"><td colspan="6">🟡 Entering Neutral State</td></tr>`;
-            html += buildRows(neutralTransitions);
-        } else {
-            html += buildRows(filtered);
+        if (trendBreakouts.length > 0) {
+            html += `<tr class="section-header"><td colspan="6">🚀 Neutral ➔ Trend Breakouts (Confirmed Trends)</td></tr>`;
+            html += buildRows(trendBreakouts, false);
+        }
+
+        if (pureNeutralList.length > 0) {
+            html += `<tr class="section-header-neutral"><td colspan="6">🟡 Pure Neutral State (Chop / Consolidation)</td></tr>`;
+            html += buildRows(pureNeutralList, true);
         }
 
         tbody.innerHTML = html;
