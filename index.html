@@ -438,7 +438,7 @@
 
             const usdtPairs = tickers.filter(t => 
                 t.symbol.endsWith('USDT') && 
-                parseFloat(t.quoteVolume) >= 1000000
+                parseFloat(t.quoteVolume) >= 5000000
             ).sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
 
             document.getElementById('stat-total').innerText = tickers.length;
