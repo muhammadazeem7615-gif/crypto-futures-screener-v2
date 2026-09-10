@@ -281,6 +281,18 @@
             </select>
         </div>
 
+        <!-- NEW VOLUME FILTER DROPDOWN -->
+        <div class="control-group">
+            <label>Min 24h Volume</label>
+            <select id="min-volume">
+                <option value="100000" selected>&gt; $100k</option>
+                <option value="200000">&gt; $200k</option>
+                <option value="500000">&gt; $500k</option>
+                <option value="1000000">&gt; $1M</option>
+                <option value="5000000">&gt; $5M (Above 5M)</option>
+            </select>
+        </div>
+
         <div class="control-group">
             <label>Quick Symbol Search</label>
             <input type="text" id="symbol-search" placeholder="e.g. BTC, ETH, SOL..." oninput="renderTable()">
@@ -295,7 +307,7 @@
 
     <div class="stats-bar">
         <div class="stat-item"><span>Total Evaluated:</span> <strong id="stat-total">0</strong></div>
-        <div class="stat-item"><span>Passed Vol Filter (> $100k 24h):</span> <strong id="stat-passed-vol">0</strong></div>
+        <div class="stat-item"><span id="stat-vol-label">Passed Vol Filter (> $100k 24h):</span> <strong id="stat-passed-vol">0</strong></div>
         <div class="stat-item"><span>Qualifying Items:</span> <strong id="stat-signals">0</strong></div>
     </div>
 
@@ -423,7 +435,12 @@
         const preset = document.getElementById('preset').value;
         const signalFilter = document.getElementById('signal-filter').value;
         const maxTrendAge = parseInt(document.getElementById('max-trend-age').value, 10);
+        const minVolumeThreshold = parseFloat(document.getElementById('min-volume').value);
         const settings = getPresetSettings(preset);
+
+        // Update stats bar label dynamically based on selection
+        const volSelectText = document.getElementById('min-volume').selectedOptions[0].text;
+        document.getElementById('stat-vol-label').innerText = `Passed Vol Filter (${volSelectText} 24h):`;
 
         const baseUrl = 'https://fapi.binance.com';
         const tickerEndpoint = '/fapi/v1/ticker/24hr';
@@ -438,7 +455,7 @@
 
             const usdtPairs = tickers.filter(t => 
                 t.symbol.endsWith('USDT') && 
-                parseFloat(t.quoteVolume) >= 100000
+                parseFloat(t.quoteVolume) >= minVolumeThreshold
             ).sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
 
             document.getElementById('stat-total').innerText = tickers.length;
