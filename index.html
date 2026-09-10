@@ -295,7 +295,7 @@
 
     <div class="stats-bar">
         <div class="stat-item"><span>Total Evaluated:</span> <strong id="stat-total">0</strong></div>
-        <div class="stat-item"><span>Passed Vol Filter (> $5M 24h):</span> <strong id="stat-passed-vol">0</strong></div>
+        <div class="stat-item"><span>Passed Vol Filter (> $100k 24h):</span> <strong id="stat-passed-vol">0</strong></div>
         <div class="stat-item"><span>Qualifying Items:</span> <strong id="stat-signals">0</strong></div>
     </div>
 
@@ -438,7 +438,7 @@
 
             const usdtPairs = tickers.filter(t => 
                 t.symbol.endsWith('USDT') && 
-                parseFloat(t.quoteVolume) >= 5000000
+                parseFloat(t.quoteVolume) >= 100000
             ).sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
 
             document.getElementById('stat-total').innerText = tickers.length;
